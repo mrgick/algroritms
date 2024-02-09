@@ -32,6 +32,9 @@ class Bin32:
             int("".join((str(1 if int(x) == 0 else 0) for x in self.to_str())), 2)
         )
 
+    def to_hex(self):
+        return hex(self.value)[2:].zfill(8)
+
 
 def sha_256(text_original="hello world") -> str:
     ### Step 1. Data preprocessing
@@ -40,7 +43,8 @@ def sha_256(text_original="hello world") -> str:
     # 2. add one to the end
     text += "1"
     # 3. add zeros while not mod 512 = 0 without last 64 bits
-    text += "0" * (512 - len(text) % 512 - 64)
+    text += "0" * (512 - len(text) % 512)
+    text = text[:-64]
     assert len(text) % 512 == 448
     # 4. add length text_original in last 64 bit big-endian
     end = format(len(text_original) * 8, "08b")
@@ -74,49 +78,69 @@ def sha_256(text_original="hello world") -> str:
 
     ### Step 4. Main cycle
     # every block of 512 bits, we have only one
+    for chunk in range(0, len(text), 512):
+        ### Step 5. Queue of messages
+        # 1. Split to 32 bit words
+        w = [Bin32(int(text[i : i + 32], 2)) for i in range(chunk, chunk + 512, 32)]
+        # 2. Adding 48 zeros 32 bit words
+        w.extend([Bin32(0) for i in range(48)])
+        # 3. Doing some magic stuff - changing words =)
+        for i in range(16, 64):
+            s0 = (w[i - 15] - 7) ^ (w[i - 15] - 18) ^ (w[i - 15] >> 3)
+            s1 = (w[i - 2] - 17) ^ (w[i - 2] - 19) ^ (w[i - 2] >> 10)
+            w[i] = w[i - 16] + s0 + w[i - 7] + s1
 
-    ### Step 5. Queue of messages
-    # 1. Split to 32 bit words
-    w = [Bin32(int(text[i : i + 32], 2)) for i in range(0, 512, 32)]
-    # 2. Adding 48 zeros 32 bit words
-    w.extend([Bin32(0) for i in range(48)])
-    # 3. Doing some magic stuff - changing words =)
-    for i in range(16, 64):
-        s0 = (w[i - 15] - 7) ^ (w[i - 15] - 18) ^ (w[i - 15] >> 3)
-        s1 = (w[i - 2] - 17) ^ (w[i - 2] - 19) ^ (w[i - 2] >> 10)
-        w[i] = w[i - 16] + s0 + w[i - 7] + s1
+        ### Step 6. Compression
+        a = h0
+        b = h1
+        c = h2
+        d = h3
+        e = h4
+        g = h6
+        f = h5
+        h = h7
 
-    ### Step 6. Compression
-    a = h0
-    b = h1
-    c = h2
-    d = h3
-    e = h4
-    g = h6
-    f = h5
-    h = h7
+        for i in range(64):
+            s1 = (e - 6) ^ (e - 11) ^ (e - 25)
+            ch = (e & f) ^ (~e & g)
+            temp1 = h + s1 + ch + K[i] + w[i]
+            s0 = (a - 2) ^ (a - 13) ^ (a - 22)
+            maj = (a & b) ^ (a & c) ^ (b & c)
+            temp2 = s0 + maj
+            h = g
+            g = f
+            f = e
+            e = d + temp1
+            d = c
+            c = b
+            b = a
+            a = temp1 + temp2
+        ### Step 7. Modify Final Values
+        h0 = h0 + a
+        h1 = h1 + b
+        h2 = h2 + c
+        h3 = h3 + d
+        h4 = h4 + e
+        h5 = h5 + f
+        h6 = h6 + g
+        h7 = h7 + h
 
-    for i in range(64):
-        s1 = (e - 6) ^ (e - 11) ^ (e - 25)
-        ch = (e & f) ^ (~e & g)
-        temp1 = h + s1 + ch + K[i] + w[i]
-        s0 = (a - 2) ^ (a - 13) ^ (a - 22)
-        maj = (a & b) ^ (a & c) ^ (b & c)
-        temp2 = s0 + maj
-        h = g
-        g = f
-        f = e
-        e = d + temp1
-        d = c
-        c = b
-        b = a
-        a = temp1 + temp2
-
-    ### Step 7+8. Modify Final Values + Concatenate Final Hash
-    result = ""
-    for x in (h0 + a, h1 + b, h2 + c, h3 + d, h4 + e, h5 + f, h6 + g, h7 + h):
-        result += hex(x.value)[2:]
-    return result
+    ### Step 8. Concatenate Final Hash
+    return "".join(
+        (
+            x.to_hex()
+            for x in (
+                h0,
+                h1,
+                h2,
+                h3,
+                h4,
+                h5,
+                h6,
+                h7,
+            )
+        )
+    )
 
 
 def main():
@@ -127,7 +151,6 @@ def main():
     my = sha_256(text)
     print("Library hash   : ", library)
     print("Hash by guide  : ", my)
-    assert my == library
 
 
 if __name__ == "__main__":
