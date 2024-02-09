@@ -30,30 +30,36 @@ def dsa_verify(r: int, s: int, g: int, q: int, p: int, y: int, hash: int) -> boo
     return v == r
 
 
+def generate_params(hash: int) -> tuple[int, int, int]:
+    return 11, 23, 4
+    # Big nums, very slow
+    N = len(bin(hash)[2:])
+    q = int("1" + "0" * (N - 1), 2)
+    p = q + 1
+    g = 4
+    return q, p, g
+
+
 def main():
-    text = "hello world"
-    hash = sha_256(text)
-    num_hash = int(hash, 16)
-    # N = len(bin(num_hash)[2:])
-    # q = int("1" + "0" * (N - 1), 2)
+    text = input("Enter message: ")
+    hash = int(sha_256(text), 16)
+    print(f"hash = {hash}")
 
-    # p = q + 1
-    # L = len(bin(p)[2:])
-    # print(f"L={L}, N={N}")
+    q, p, g = generate_params(hash)
+    print(f"q = {q} p = {p} g = {g}")
 
-    g = 4
+    x = random.randint(1, q)
+    y = pow(g, x) % p
 
-    q = 11
-    p = 23
-    g = 4
-
-    x = 7  # secret key
-    y = pow(g, x) % p  # public key
     print(f"Secret key = {x}\nPublic key = {y}")
-    r, s = dsa_sign(q, p, g, x, num_hash)
-    print(r, s)
-    l = dsa_verify(r, s, g, q, p, y, num_hash)
-    print(l)
+
+    r, s = dsa_sign(q, p, g, x, hash)
+    print(f"r = {r}, s = {s}")
+    verify = dsa_verify(r, s, g, q, p, y, hash)
+    if verify:
+        print("Good sign!")
+    else:
+        print("Bad sign!")
 
 
 if __name__ == "__main__":

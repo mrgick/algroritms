@@ -145,7 +145,7 @@ def sha_256(text_original="hello world") -> str:
 
 
 def main():
-    text = "hello world"
+    text = input("Enter message: ")
     from hashlib import sha256
 
     library = sha256(text.encode("utf-8")).hexdigest()
