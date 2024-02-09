@@ -9,6 +9,7 @@ class Bin32:
         return str(bin(self.value)[2:]).zfill(32)
 
     def __sub__(self, n: int) -> "Bin32":
+        """Rotate right"""
         s = bin(self.value)[2:].zfill(32)
         return Bin32(int(s[-n:] + s[:-n], 2))
 
