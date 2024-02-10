@@ -1,4 +1,5 @@
 # SHA-256
+# https://blog.pagefreezer.com/sha-256-benefits-evidence-authentication#:~:text=The%20main%20reason%20technology%20leaders,some%20other%20popular%20hashing%20algorithms. 
 class Bin32:
     MOD = 2**32
 

@@ -1,13 +1,21 @@
+# DSA
+# https://en.wikipedia.org/wiki/Digital_Signature_Algorithm
 from sha2 import sha_256
 import random
 
 
-def euclid_ext(a, b):
-    if b == 0:
-        return a, 1, 0
-    else:
-        d, x, y = euclid_ext(b, a % b)
-        return d, y, x - y * (a // b)
+def gcdExtended(a: int, b: int) -> tuple[int, int, int]:
+    # https://www.geeksforgeeks.org/euclidean-algorithms-basic-and-extended/
+    # ax + by = gcd(a, b)
+
+    # Base Case
+    if a == 0:
+        return b, 0, 1
+    gcd, x1, y1 = gcdExtended(b % a, a)
+    # Update x and y using results of recursive call
+    x = y1 - (b // a) * x1
+    y = x1
+    return gcd, x, y
 
 
 def dsa_sign(q: int, p: int, g: int, x: int, hash: int) -> tuple[int, int]:
@@ -16,14 +24,14 @@ def dsa_sign(q: int, p: int, g: int, x: int, hash: int) -> tuple[int, int]:
         r = (g**k % p) % q
         if not r:
             continue
-        s = (euclid_ext(k, q)[1] * (hash + x * r)) % q
+        s = (gcdExtended(k, q)[1] * (hash + x * r)) % q
         if not s:
             continue
         return int(r), int(s)
 
 
 def dsa_verify(r: int, s: int, g: int, q: int, p: int, y: int, hash: int) -> bool:
-    w = euclid_ext(s, q)[1]
+    w = gcdExtended(s, q)[1]
     u1 = (hash * w) % q
     u2 = (r * w) % q
     v = (g**u1 * y**u2 % p) % q
